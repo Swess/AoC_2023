@@ -30,14 +30,28 @@ main :: proc() {
     games: [dynamic]Game
     parse_games(&content, &games)
 
-    sum: int
+    id_sum, power_sum: int
     for g in games {
         if is_valid_game(g) {
-            sum += g.id
+            id_sum += g.id
         }
+        
+        min_bag := get_min_bag(g)
+        power_sum += min_bag.r * min_bag.g * min_bag.b
     }
 
-    fmt.println(sum)
+    fmt.println("Valid game id sum: ", id_sum)
+    fmt.println("Game's bag powers sum: ", power_sum)
+}
+
+get_min_bag :: proc(game: Game) -> Round {
+    min: Round
+    for r in game.rounds {
+        min.r = max(r.r, min.r)
+        min.g = max(r.g, min.g)
+        min.b = max(r.b, min.b)
+    }
+    return min
 }
 
 is_valid_game :: proc(game: Game) -> bool {
@@ -67,14 +81,13 @@ parse_games :: proc(input: ^string, games: ^[dynamic]Game) {
                 seg := strings.split(p_trimmed, " ")
                 v := strconv.atoi(seg[0])
                 
-                if strings.compare(seg[1], "red") == 0 {
-                    r.r = v
-                }
-                if strings.compare(seg[1], "green") == 0 {
-                    r.g = v
-                }
-                if strings.compare(seg[1], "blue") == 0 {
-                    r.b = v
+                switch {
+                    case strings.compare(seg[1], "red") == 0:
+                        r.r += v
+                    case strings.compare(seg[1], "green") == 0:
+                        r.g += v
+                    case strings.compare(seg[1], "blue") == 0:
+                        r.b += v
                 }
             }
             append(&game.rounds, r)
