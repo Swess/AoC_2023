@@ -6,6 +6,9 @@ import "core:strings"
 import "core:math"
 import "core:testing"
 
+PROCESS_SPELLED_NUMBERS_TOKENS := true
+SPELLED_NUMBERS := []string { "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"}
+
 main :: proc() {
     content, success := read_text_file("./inputs.txt")
     res := scan_tokens(&content)
@@ -26,10 +29,22 @@ get_token_line_value :: proc(tokens : [dynamic]int) -> (int) {
 
 scan_tokens :: proc(input : ^string) -> (tokens : [dynamic][dynamic]int) {
     for line in strings.split_lines_iterator(input) {
-		line_tokens : [dynamic]int
+        line_tokens : [dynamic]int
+        head_drag := 0
         for char, i in line {
             if char >= '0' && char <= '9' {
                 append(&line_tokens, int(char-'0'))
+            }
+            
+            if !PROCESS_SPELLED_NUMBERS_TOKENS { continue }
+            
+            buf := line[head_drag:i+1]
+            for spelled, j in SPELLED_NUMBERS {
+                subtr_index := strings.index(buf, spelled)
+                if subtr_index >= 0 {
+                    head_drag += subtr_index + 1
+                    append(&line_tokens, j + 1)
+                } 
             }
         }
         append(&tokens, line_tokens)
