@@ -4,13 +4,14 @@ import "core:fmt"
 import "core:os"
 import "core:strings"
 import "core:math"
-import "core:testing"
+import sa "core:container/small_array"
 
-PROCESS_SPELLED_NUMBERS_TOKENS := true
-SPELLED_NUMBERS := []string { "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"}
+PROCESS_SPELLED_NUMBERS_TOKENS :: true
+SPELLED_NUMBERS :: []string { "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"}
 
 main :: proc() {
     content, success := read_text_file("./inputs.txt")
+
     res := scan_tokens(&content)
     sum: int
     for line in res {
@@ -21,33 +22,54 @@ main :: proc() {
     fmt.println("sum : ", sum)
 }
 
-get_token_line_value :: proc(tokens : [dynamic]int) -> (int) {
+get_token_line_value :: proc(tokens : [2]int) -> (int) {
     if len(tokens) == 0 { return 0 }
     
-    return (tokens[0] * 10 + tokens[len(tokens) - 1])
+    return (tokens[0] * 10 + tokens[1])
 }   
 
-scan_tokens :: proc(input : ^string) -> (tokens : [dynamic][dynamic]int) {
+scan_tokens :: proc(input : ^string) -> (tokens : [dynamic][2]int) {
     for line in strings.split_lines_iterator(input) {
-        line_tokens : [dynamic]int
-        head_drag := 0
-        for char, i in line {
-            if char >= '0' && char <= '9' {
-                append(&line_tokens, int(char-'0'))
+        first := max(int)
+        last := 0
+
+        indexes := make([dynamic]int, len(line), len(line))
+        defer delete(indexes)
+        
+        update_edges :: proc(index : int, first: ^int, last: ^int) {
+            if index < first^ {
+                first^ = index
             }
-            
-            if !PROCESS_SPELLED_NUMBERS_TOKENS { continue }
-            
-            buf := line[head_drag:i+1]
-            for spelled, j in SPELLED_NUMBERS {
-                subtr_index := strings.index(buf, spelled)
-                if subtr_index >= 0 {
-                    head_drag += subtr_index + 1
-                    append(&line_tokens, j + 1)
-                } 
+            if index > last^ {
+                last^ = index
             }
         }
-        append(&tokens, line_tokens)
+
+        for char, i in line {
+            if char >= '0' && char <= '9' {
+                indexes[i] = int(char-'0')
+                update_edges(i, &first, &last)
+            }
+        }
+
+        when PROCESS_SPELLED_NUMBERS_TOKENS {
+            for spelled, j in SPELLED_NUMBERS {
+                first_index := strings.index(line, spelled)
+                last_index := strings.last_index(line, spelled)
+                
+                if first_index >= 0 {
+                    indexes[first_index] = j + 1
+                    update_edges(first_index, &first, &last)
+                }
+                if last_index >= 0 {
+                    indexes[last_index] = j + 1
+                    update_edges(last_index, &first, &last)
+                }
+            }
+        }
+
+
+        append(&tokens, [2]int{indexes[first], indexes[last]})
 	}
     
     return tokens
